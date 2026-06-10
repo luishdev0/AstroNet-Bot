@@ -1,0 +1,373 @@
+[
+  {
+    "id": "b65107bc88144b9c",
+    "type": "tab",
+    "label": "AstroNet Watson Nodes",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "c398805696cc1b11",
+    "type": "telegram bot",
+    "botname": "AstroNet FAQ Bot",
+    "usernames": "",
+    "chatids": "",
+    "baseapiurl": "",
+    "testenvironment": false,
+    "updatemode": "polling",
+    "pollinterval": 300,
+    "usesocks": false,
+    "sockshost": "",
+    "socksprotocol": "socks5",
+    "socksport": 6667,
+    "socksusername": "anonymous",
+    "sockspassword": "",
+    "bothost": "",
+    "botpath": "",
+    "localbothost": "0.0.0.0",
+    "localbotport": 8443,
+    "publicbotport": 8443,
+    "privatekey": "",
+    "certificate": "",
+    "useselfsignedcertificate": false,
+    "sslterminated": false,
+    "verboselogging": false
+  },
+  {
+    "id": "62f643e6af100409",
+    "type": "telegram receiver",
+    "z": "b65107bc88144b9c",
+    "name": "Telegram Receiver",
+    "bot": "c398805696cc1b11",
+    "saveDataDir": "",
+    "filterCommands": false,
+    "hasinput": false,
+    "inputs": 0,
+    "handleallupdates": false,
+    "handleprocessupdates": false,
+    "x": 180,
+    "y": 300,
+    "wires": [
+      [
+        "f39e1c37d3983f7f",
+        "6a5c541cc9c0824d"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "f39e1c37d3983f7f",
+    "type": "debug",
+    "z": "b65107bc88144b9c",
+    "name": "debug telegram",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 180,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "6a5c541cc9c0824d",
+    "type": "switch",
+    "z": "b65107bc88144b9c",
+    "name": "separar texto e áudio",
+    "property": "payload.type",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "voice",
+        "vt": "str"
+      },
+      {
+        "t": "neq",
+        "v": "voice",
+        "vt": "str"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 2,
+    "x": 430,
+    "y": 300,
+    "wires": [
+      [
+        "1fdf5b0526c105ee"
+      ],
+      [
+        "24f543a35a09373b"
+      ]
+    ]
+  },
+  {
+    "id": "1fdf5b0526c105ee",
+    "type": "function",
+    "z": "b65107bc88144b9c",
+    "name": "baixar áudio Telegram",
+    "func": "const TELEGRAM_TOKEN = env.get(\"TELEGRAM_TOKEN\");\n\nmsg.chatId = msg.payload.chatId;\n\nif (!TELEGRAM_TOKEN) {\n    msg.payload = {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: \"Token do Telegram não configurado. Defina a variável TELEGRAM_TOKEN no ambiente do Node-RED.\"\n    };\n\n    return [null, msg];\n}\n\nlet fileId = msg.payload.content;\n\nif (!fileId) {\n    msg.payload = {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: \"Não consegui identificar o áudio enviado.\"\n    };\n\n    return [null, msg];\n}\n\ntry {\n    let urlGetFile =\n        \"https://api.telegram.org/bot\" +\n        TELEGRAM_TOKEN +\n        \"/getFile?file_id=\" +\n        fileId;\n\n    let respostaGetFile = await fetch(urlGetFile);\n    let dadosArquivo = await respostaGetFile.json();\n\n    if (!dadosArquivo.ok || !dadosArquivo.result || !dadosArquivo.result.file_path) {\n        node.warn(dadosArquivo);\n\n        msg.payload = {\n            chatId: msg.chatId,\n            type: \"message\",\n            content: \"Não consegui baixar o áudio enviado. Tente mandar outro áudio.\"\n        };\n\n        return [null, msg];\n    }\n\n    let filePath = dadosArquivo.result.file_path;\n\n    let urlDownload =\n        \"https://api.telegram.org/file/bot\" +\n        TELEGRAM_TOKEN +\n        \"/\" +\n        filePath;\n\n    let respostaAudio = await fetch(urlDownload);\n\n    if (!respostaAudio.ok) {\n        throw new Error(\"Erro ao baixar áudio: \" + respostaAudio.status);\n    }\n\n    let arrayBuffer = await respostaAudio.arrayBuffer();\n\n    msg.payload = Buffer.from(arrayBuffer);\n\n    return [msg, null];\n\n} catch (erro) {\n    node.error(erro);\n\n    msg.payload = {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: \"Erro ao baixar o áudio do Telegram. Verifique o token do bot.\"\n    };\n\n    return [null, msg];\n}",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 220,
+    "wires": [
+      [
+        "d97bf4d57745033e"
+      ],
+      [
+        "a2e89c768b4ea865"
+      ]
+    ]
+  },
+  {
+    "id": "d97bf4d57745033e",
+    "type": "watson-speech-to-text",
+    "z": "b65107bc88144b9c",
+    "name": "speech to text",
+    "alternatives": 1,
+    "speakerlabels": false,
+    "smartformatting": false,
+    "lang": "pt-BR",
+    "langhidden": "pt-BR_BroadbandModel",
+    "langcustomhidden": "",
+    "custom-weight": "",
+    "band": "BroadbandModel",
+    "bandhidden": "BroadbandModel",
+    "keywords": "",
+    "keywords-threshold": "",
+    "word-confidence": false,
+    "password": "",
+    "apikey": "",
+    "payload-response": true,
+    "streaming-mode": false,
+    "streaming-mute": true,
+    "auto-connect": false,
+    "discard-listening": false,
+    "disable-precheck": false,
+    "service-endpoint": "",
+    "x": 970,
+    "y": 220,
+    "wires": [
+      [
+        "114d2da3a777a93e"
+      ]
+    ]
+  },
+  {
+    "id": "114d2da3a777a93e",
+    "type": "function",
+    "z": "b65107bc88144b9c",
+    "name": "preparar texto transcrito",
+    "func": "let texto = \"\";\n\ntry {\n    if (\n        msg.payload &&\n        msg.payload.results &&\n        msg.payload.results.length > 0 &&\n        msg.payload.results[0].alternatives &&\n        msg.payload.results[0].alternatives.length > 0\n    ) {\n        texto = msg.payload.results[0].alternatives[0].transcript;\n    }\n} catch (erro) {\n    node.warn(erro);\n}\n\ntexto = String(texto || \"\").trim();\n\nif (!texto) {\n    msg.payload = {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: \"Não consegui entender o áudio. Tente falar mais perto do microfone.\"\n    };\n\n    return [null, msg];\n}\n\nlet msgParaWatson = {\n    payload: {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: texto\n    }\n};\n\nlet msgConfirmacao = {\n    payload: {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: \"Entendi seu áudio como: \\\"\" + texto + \"\\\"\"\n    }\n};\n\nreturn [msgParaWatson, msgConfirmacao];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1230,
+    "y": 220,
+    "wires": [
+      [
+        "24f543a35a09373b"
+      ],
+      [
+        "a2e89c768b4ea865"
+      ]
+    ]
+  },
+  {
+    "id": "24f543a35a09373b",
+    "type": "function",
+    "z": "b65107bc88144b9c",
+    "name": "preparar Assistant",
+    "func": "msg.chatId = msg.payload.chatId;\n\nlet textoUsuario =\n    msg.payload.content ||\n    msg.payload.text ||\n    msg.payload.command ||\n    msg.payload.message ||\n    \"\";\n\ntextoUsuario = String(textoUsuario).trim();\nlet textoMinusculo = textoUsuario.toLowerCase();\n\nlet boasVindas =\n    \"Olá! Seja bem-vindo ao atendimento virtual da AstroNet. 🚀\\n\\n\" +\n    \"Eu sou o assistente inteligente da AstroNet e posso ajudar você com dúvidas sobre internet via satélite, cobertura em regiões remotas, planos, instalação, equipamentos, suporte técnico e contratação.\\n\\n\" +\n    \"Você pode perguntar, por exemplo:\\n\" +\n    \"• Como funciona a internet via satélite?\\n\" +\n    \"• A AstroNet atende áreas rurais?\\n\" +\n    \"• Quais planos a AstroNet oferece?\\n\" +\n    \"• Como funciona a instalação?\\n\" +\n    \"• Solicitar orçamento\\n\\n\" +\n    \"Como posso ajudar você hoje?\";\n\nif (\n    textoMinusculo === \"/start\" ||\n    textoMinusculo === \"start\" ||\n    textoMinusculo === \"/restart\" ||\n    textoMinusculo === \"restart\" ||\n    textoMinusculo === \"/help\" ||\n    textoMinusculo === \"oi\" ||\n    textoMinusculo === \"olá\" ||\n    textoMinusculo === \"ola\"\n) {\n    flow.set(\"watson_context_\" + msg.chatId, null);\n\n    let msgTexto = {\n        payload: {\n            chatId: msg.chatId,\n            type: \"message\",\n            content: boasVindas\n        }\n    };\n\n    let msgTTS = {\n        chatId: msg.chatId,\n        respostaTexto: boasVindas\n    };\n\n    return [null, msgTexto, msgTTS];\n}\n\nif (!textoUsuario) {\n    msg.payload = {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: \"Não entendi sua mensagem. Envie texto ou áudio.\"\n    };\n\n    return [null, msg, null];\n}\n\nlet contextoSalvo = flow.get(\"watson_context_\" + msg.chatId) || {};\n\nmsg.payload = textoUsuario;\n\nmsg.params = {\n    input: {\n        message_type: \"text\",\n        text: textoUsuario\n    },\n    context: contextoSalvo\n};\n\nreturn [msg, null, null];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 360,
+    "wires": [
+      [
+        "d80d18acd5654704"
+      ],
+      [
+        "a2e89c768b4ea865"
+      ],
+      [
+        "fa561856c464a494"
+      ]
+    ]
+  },
+  {
+    "id": "d80d18acd5654704",
+    "type": "watson-assistant-v2",
+    "z": "b65107bc88144b9c",
+    "name": "assistantV2",
+    "service-endpoint": "",
+    "assistant_id": "COLE_AQUI_SEU_ASSISTANT_ID",
+    "debug": false,
+    "restart": false,
+    "return_context": true,
+    "alternate_intents": false,
+    "multisession": false,
+    "timeout": "",
+    "optout-learning": false,
+    "persist-session-id": false,
+    "x": 960,
+    "y": 360,
+    "wires": [
+      [
+        "71b8b974cee2052f"
+      ]
+    ]
+  },
+  {
+    "id": "71b8b974cee2052f",
+    "type": "function",
+    "z": "b65107bc88144b9c",
+    "name": "tratar resposta",
+    "func": "let resposta = \"Desculpe, não consegui entender sua pergunta.\";\n\ntry {\n    if (msg.payload && msg.chatId) {\n        if (msg.payload.context) {\n            flow.set(\"watson_context_\" + msg.chatId, msg.payload.context);\n        }\n\n        if (\n            msg.payload.output &&\n            msg.payload.output.generic &&\n            msg.payload.output.generic.length > 0\n        ) {\n            let textos = msg.payload.output.generic\n                .filter(item => item.response_type === \"text\")\n                .map(item => item.text);\n\n            if (textos.length > 0) {\n                resposta = textos.join(\"\\n\\n\");\n            }\n        }\n    }\n} catch (erro) {\n    node.warn(erro);\n    resposta = \"Ocorreu um erro ao processar a resposta da AstroNet.\";\n}\n\nlet msgTexto = {\n    payload: {\n        chatId: msg.chatId,\n        type: \"message\",\n        content: resposta\n    }\n};\n\nlet msgTTS = {\n    chatId: msg.chatId,\n    respostaTexto: resposta\n};\n\nreturn [msgTexto, msgTTS];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1200,
+    "y": 360,
+    "wires": [
+      [
+        "a2e89c768b4ea865"
+      ],
+      [
+        "fa561856c464a494"
+      ]
+    ]
+  },
+  {
+    "id": "fa561856c464a494",
+    "type": "function",
+    "z": "b65107bc88144b9c",
+    "name": "preparar TTS",
+    "func": "let texto = msg.respostaTexto || \"Olá, sou o assistente da AstroNet.\";\n\ntexto = texto\n    .replace(/\\n+/g, \" \")\n    .replace(/•/g, \"\")\n    .replace(/-/g, \"\")\n    .replace(/\\*/g, \"\")\n    .replace(/_/g, \"\")\n    .trim();\n\nif (texto.length > 3500) {\n    texto = texto.substring(0, 3500) + \"... Para mais detalhes, veja a resposta em texto.\";\n}\n\nmsg.payload = texto;\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 950,
+    "y": 500,
+    "wires": [
+      [
+        "9217152cd1ece36f"
+      ]
+    ]
+  },
+  {
+    "id": "9217152cd1ece36f",
+    "type": "watson-text-to-speech",
+    "z": "b65107bc88144b9c",
+    "name": "text to speech",
+    "lang": "pt-BR",
+    "langhidden": "pt-BR_IsabelaV3Voice",
+    "langcustom": "NoCustomisationSetting",
+    "langcustomhidden": "",
+    "voice": "pt-BR_IsabelaV3Voice",
+    "voicehidden": "pt-BR_IsabelaV3Voice",
+    "format": "audio/mp3",
+    "password": "",
+    "apikey": "",
+    "payload-response": true,
+    "service-endpoint": "",
+    "x": 1190,
+    "y": 500,
+    "wires": [
+      [
+        "8f7b805a73a242ab",
+        "9466817511f7e748"
+      ]
+    ]
+  },
+  {
+    "id": "8f7b805a73a242ab",
+    "type": "function",
+    "z": "b65107bc88144b9c",
+    "name": "preparar áudio Telegram",
+    "func": "msg.payload = {\n    chatId: msg.chatId,\n    type: \"document\",\n    content: msg.payload,\n    caption: \"Resposta em áudio da AstroNet\",\n    filename: \"resposta-astronet.mp3\"\n};\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1450,
+    "y": 500,
+    "wires": [
+      [
+        "a2e89c768b4ea865"
+      ]
+    ]
+  },
+  {
+    "id": "a2e89c768b4ea865",
+    "type": "telegram sender",
+    "z": "b65107bc88144b9c",
+    "name": "Telegram Sender",
+    "bot": "c398805696cc1b11",
+    "haserroroutput": false,
+    "outputs": 1,
+    "x": 1660,
+    "y": 380,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "e24e4c8e27246d6f",
+    "type": "comment",
+    "z": "b65107bc88144b9c",
+    "name": "CONFIGURAÇÃO SEGURA",
+    "info": "CONFIGURAÇÃO SEGURA PARA O GITHUB\n\nEste fluxo foi limpo para não expor chaves reais.\n\nAntes de usar no Node-RED, configure manualmente:\n\n1. Telegram Bot\n   - Crie/obtenha o token no BotFather.\n   - Configure a variável de ambiente TELEGRAM_TOKEN.\n   - No config node do Telegram, informe o token pela interface do Node-RED, se necessário.\n\n2. IBM Watson Speech to Text\n   - Configure o endpoint e a API key no node \"speech to text\".\n\n3. IBM Watson Assistant\n   - Configure o endpoint, API key e assistant_id no node \"assistantV2\".\n\n4. IBM Watson Text to Speech\n   - Configure o endpoint e a API key no node \"text to speech\".\n\nNunca publique tokens, API keys, senhas ou arquivos .env no GitHub.\n",
+    "x": 200,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "9466817511f7e748",
+    "type": "debug",
+    "z": "b65107bc88144b9c",
+    "name": "debug 1",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1400,
+    "y": 680,
+    "wires": []
+  },
+  {
+    "id": "2cd2214498bcee02",
+    "type": "global-config",
+    "env": [],
+    "modules": {
+      "node-red-contrib-telegrambot": "17.4.5",
+      "node-red-node-sqlite": "2.0.1",
+      "node-red-node-watson": "0.10.3"
+    }
+  }
+]

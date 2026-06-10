@@ -1,0 +1,15 @@
+{
+  "name": "astronet-bot",
+  "version": "1.0.0",
+  "description": "Chatbot AstroNet via Telegram, Node-RED e IBM Watson.",
+  "private": true,
+  "scripts": {
+    "start": "node-red",
+    "check": "echo \"Importe flows/astronet-flow.safe.json no Node-RED e configure as credenciais.\""
+  },
+  "dependencies": {
+    "node-red-contrib-telegrambot": "17.4.5",
+    "node-red-node-sqlite": "2.0.1",
+    "node-red-node-watson": "0.10.3"
+  }
+}
